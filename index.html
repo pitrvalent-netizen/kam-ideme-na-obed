@@ -1,49 +1,108 @@
-<script>
-  const PRICE_LABEL = { "UNDER_10":"do 10 €","UNDER_15":"do 15 €","OVER_20":"20+ €" };
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kam ideme na obed?</title>
+  <style>
+    :root { --bg:#0f1115; --card:#151821; --txt:#e8ebf1; --muted:#a7afc0; --accent:#f5c451; --ok:#86efac; --err:#f87171; }
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.6 system-ui,-apple-system,Segoe UI,Inter,Roboto,sans-serif}
+    .wrap{max-width:860px;margin:40px auto;padding:0 16px}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+    .dot{width:10px;height:10px;border-radius:50%;background:var(--ok)}
+    .card{background:var(--card);border-radius:16px;padding:18px 20px;margin-bottom:12px}
+    h1{font-size:24px;margin:0 0 4px} .date{color:var(--muted);font-size:14px}
+    h2{font-size:18px;margin:0 0 10px} .row{display:flex;flex-wrap:wrap;gap:10px}
+    .tag{font-size:12px;border-radius:999px;padding:6px 10px;background:#202538;color:var(--muted)}
+    .price{background:#1f2b1b;color:#b5f7c2}
+    .tips li{margin:6px 0}
+    .error{background:#2a1414;color:#ffd4d4;border:1px solid #4a1f1f;padding:10px 12px;border-radius:12px;margin-top:10px;font-size:13px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="dot"></div>
+      <div>
+        <h1>Kam ideme na obed?</h1>
+        <div class="date" id="date">Načítavam…</div>
+      </div>
+    </header>
 
-  function render(data){
-    document.getElementById('date').textContent =
-      new Date(data.date).toLocaleDateString('sk-SK', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+    <section class="card" id="ndegust"><h2>Ndegust</h2><div class="row"><span class="tag">Načítavam…</span></div></section>
+    <section class="card" id="umedveda"><h2>U Medveďa</h2><div class="row"><span class="tag">Načítavam…</span></div></section>
+    <section class="card">
+      <h2>Tipy v okolí (do 15 km)</h2>
+      <ol class="tips" id="tips"><li>Načítavam…</li></ol>
+    </section>
 
-    function blockList(el, title, section){
-      const items = section?.menu || [];
-      const list = items.length
-        ? `<ul style="margin:8px 0 0 18px;padding:0">${items.map(i => `<li>${i}</li>`).join('')}</ul>`
-        : `<div class="row"><span class="tag">—</span></div>`;
+    <footer>Aktualizované denne o 10:30 • Čierna Voda (Chorvátsky Grob)</footer>
+    <div id="errBox" class="wrap" style="max-width:860px"></div>
+  </div>
 
-      el.innerHTML = `
-        <h2>${title}</h2>
-        <div class="row">
-          <span class="tag price">${PRICE_LABEL[section?.priceBand] || '—'}</span>
-        </div>
-        ${list}
-      `;
+  <script>
+    const PRICE_LABEL = { "UNDER_10":"do 10 €","UNDER_15":"do 15 €","OVER_20":"20+ €" };
+
+    function render(data){
+      // dátum
+      try {
+        document.getElementById('date').textContent =
+          new Date(data.date).toLocaleDateString('sk-SK',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+      } catch {
+        document.getElementById('date').textContent = data.date || '—';
+      }
+
+      // blok s viacerými položkami
+      function blockList(el, title, section){
+        const items = Array.isArray(section?.menu) ? section.menu : [];
+        const list = items.length
+          ? `<ul style="margin:8px 0 0 18px;padding:0">${items.map(i=>`<li>${i}</li>`).join('')}</ul>`
+          : `<div class="row"><span class="tag">—</span></div>`;
+
+        el.innerHTML = `
+          <h2>${title}</h2>
+          <div class="row">
+            <span class="tag price">${PRICE_LABEL[section?.priceBand] || '—'}</span>
+          </div>
+          ${list}
+        `;
+      }
+
+      blockList(document.getElementById('ndegust'), 'Ndegust', data.ndegust);
+      blockList(document.getElementById('umedveda'), 'U Medveďa', data.umedveda);
+
+      const tips = Array.isArray(data.tips) ? data.tips : [];
+      document.getElementById('tips').innerHTML = tips.map(t => {
+        const price = `<span class="tag price" style="margin-left:8px">${PRICE_LABEL[t.priceBand] || '—'}</span>`;
+        const link = t.url ? ` <a href="${t.url}" target="_blank" rel="noopener" style="margin-left:8px;color:#f5c451;text-decoration:none">zdroj ↗</a>` : '';
+        return `<li><strong>${t.name || 'Tip'}</strong> – ${t.dish || 'špecialita'}${price}${link}</li>`;
+      }).join('') || '<li>—</li>';
     }
 
-    blockList(document.getElementById('ndegust'), 'Ndegust', data.ndegust);
-    blockList(document.getElementById('umedveda'), 'U Medveďa', data.umedveda);
+    function showError(msg){
+      const box = document.getElementById('errBox');
+      box.innerHTML = `<div class="error">Poznámka: ${msg}</div>`;
+    }
 
-    const tips = Array.isArray(data.tips) ? data.tips : [];
-    document.getElementById('tips').innerHTML = tips.map(t => {
-      const price = `<span class="tag price" style="margin-left:8px">${PRICE_LABEL[t.priceBand] || '—'}</span>`;
-      const link = t.url ? ` <a href="${t.url}" target="_blank" rel="noopener" style="margin-left:8px;color:#f5c451;text-decoration:none">zdroj ↗</a>` : '';
-      return `<li><strong>${t.name}</strong> – ${t.dish || 'špecialita'}${price}${link}</li>`;
-    }).join('');
-  }
-
-  fetch('./data.json?cache=' + Date.now())
-    .then(r => { if (!r.ok) throw new Error('Nepodarilo sa načítať data.json ('+r.status+')'); return r.json(); })
-    .then(d => render(d))
-    .catch(err => {
-      console.error(err);
-      const fallback = {
-        date: new Date().toISOString().slice(0,10),
-        ndegust: { menu: [], priceBand: "UNDER_10" },
-        umedveda: { menu: [], priceBand: "UNDER_15" },
-        tips: []
-      };
-      render(fallback);
-      const footer = document.querySelector('footer');
-      footer.innerHTML += ` • <span style="color:#f5c451">Pozn.: ${err.message}</span>`;
-    });
-</script>
+    // fetch s fallbackom
+    (async () => {
+      try {
+        const r = await fetch('./data.json?cache=' + Date.now());
+        if (!r.ok) throw new Error('Nepodarilo sa načítať data.json (HTTP '+r.status+')');
+        const d = await r.json();
+        render(d);
+      } catch (e) {
+        console.error(e);
+        // Minimálny fallback aby stránka nikdy nebola prázdna
+        render({
+          date: new Date().toISOString().slice(0,10),
+          ndegust: { menu: [], priceBand: "UNDER_10" },
+          umedveda: { menu: [], priceBand: "UNDER_15" },
+          tips: []
+        });
+        showError(e.message || 'Neznáma chyba pri načítaní dát.');
+      }
+    })();
+  </script>
+</body>
+</html>
