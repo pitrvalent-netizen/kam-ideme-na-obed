@@ -1,14 +1,19 @@
 {
   "date": "2025-08-19",
   "ndegust": {
-    "soup": "",
-    "main": "",
+    "soup": "Paradajková s bazalkou",
+    "main": "Kuracie prsia na grile, ryža",
     "priceBand": "UNDER_10"
   },
   "umedveda": {
-    "soup": "",
-    "main": "",
-    "priceBand": "UNDER_10"
+    "soup": "Cesnačka so syrom",
+    "main": "Bravčový perkelt s knedľou",
+    "priceBand": "UNDER_15"
   },
-  "tips": []
+  "tips": [
+    { "name": "Slovenský Grob – Husacina", "dish": "Pečená hus s lokšami", "priceBand": "OVER_20" },
+    { "name": "Ivanka pri Dunaji – Viet Bistro", "dish": "Pho bo + jarné rolky", "priceBand": "UNDER_15" },
+    { "name": "Rača – Pizza u Frankieho", "dish": "Pizza Margherita + polievka", "priceBand": "UNDER_10" },
+    { "name": "Bernolákovo – Reštaurácia Alfa", "dish": "Sviečková na smotane", "priceBand": "UNDER_15" }
+  ]
 }
