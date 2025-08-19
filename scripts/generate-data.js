@@ -7,35 +7,41 @@ const todayISO = new Date().toISOString().slice(0,10);
 
 const systemPrompt = `
 Si pomocník pre denné obedy v lokalite Chorvátsky Grob – Čierna Voda (Slovensko).
-Vráť IBA platný JSON podľa tejto schémy:
+Vráť IBA platný JSON podľa tejto schémy (V2):
 {
   "date": "YYYY-MM-DD",
-  "ndegust": { "soup": "text|—", "main": "text|—", "priceBand": "UNDER_10|UNDER_15|OVER_20" },
-  "umedveda": { "soup": "text|—", "main": "text|—", "priceBand": "UNDER_10|UNDER_15|OVER_20" },
+  "ndegust": {
+    "menu": ["string", "string", "string"],  // každý riadok jedna položka denného menu (polievka, hlavné 1, hlavné 2, ...)
+    "priceBand": "UNDER_10|UNDER_15|OVER_20"
+  },
+  "umedveda": {
+    "menu": ["string", "string", "string"],
+    "priceBand": "UNDER_10|UNDER_15|OVER_20"
+  },
   "tips": [
-    { "name": "string", "dish": "string|—", "priceBand": "UNDER_10|UNDER_15|OVER_20" },
-    { "name": "string", "dish": "string|—", "priceBand": "UNDER_10|UNDER_15|OVER_20" },
-    { "name": "string", "dish": "string|—", "priceBand": "UNDER_10|UNDER_15|OVER_20" },
-    { "name": "string", "dish": "string|—", "priceBand": "UNDER_10|UNDER_15|OVER_20" }
+    { "name": "string", "dish": "string|—", "priceBand": "UNDER_10|UNDER_15|OVER_20", "url": "https://..." },
+    { "name": "string", "dish": "string|—", "priceBand": "UNDER_10|UNDER_15|OVER_20", "url": "https://..." },
+    { "name": "string", "dish": "string|—", "priceBand": "UNDER_10|UNDER_15|OVER_20", "url": "https://..." },
+    { "name": "string", "dish": "string|—", "priceBand": "UNDER_10|UNDER_15|OVER_20", "url": "https://..." }
   ]
 }
 Požiadavky:
 - Zahrň Ndegust a U Medveďa vždy.
-- Pridaj 4 tipy v okruhu do 15 km od Čiernej Vody (Bratislava-okolie).
-- Ak si si nie istý konkrétnym obedovým menu, použi „—“ a zvoľ typické jedlá; cenové pásmo odhadni realisticky.
+- Pri Ndegust a U Medveďa použi pole "menu" s viacerými položkami. Ak nevieš, nechaj prázdny zoznam [].
+- 4 tipy v okruhu do 15 km od Čiernej Vody; vždy pridaj "url" na zdroj (ak si neistý, použi reštauračný web, Facebook stránku alebo Google Mapy URL).
 - Nepíš žiadne komentáre, iba čistý JSON.
 `;
 
 function placeholderData() {
   return {
     date: todayISO,
-    ndegust: { soup: "—", main: "—", priceBand: "UNDER_10" },
-    umedveda: { soup: "—", main: "—", priceBand: "UNDER_15" },
+    ndegust: { menu: [], priceBand: "UNDER_10" },
+    umedveda: { menu: [], priceBand: "UNDER_15" },
     tips: [
-      { name: "Slovenský Grob – Husacina", dish: "—", priceBand: "OVER_20" },
-      { name: "Ivanka pri Dunaji – Viet Bistro", dish: "—", priceBand: "UNDER_15" },
-      { name: "Rača – Pizza", dish: "—", priceBand: "UNDER_10" },
-      { name: "Bernolákovo – Reštaurácia", dish: "—", priceBand: "UNDER_15" }
+      { name: "Slovenský Grob – Husacina", dish: "—", priceBand: "OVER_20", url: "https://www.google.com/maps" },
+      { name: "Ivanka pri Dunaji – Viet Bistro", dish: "—", priceBand: "UNDER_15", url: "https://www.google.com/maps" },
+      { name: "Rača – Pizza", dish: "—", priceBand: "UNDER_10", url: "https://www.google.com/maps" },
+      { name: "Bernolákovo – Reštaurácia", dish: "—", priceBand: "UNDER_15", url: "https://www.google.com/maps" }
     ]
   };
 }
@@ -54,7 +60,7 @@ async function tryRequestWithRetry() {
         temperature: 0.2,
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Dátum: ${todayISO}. Vygeneruj JSON podľa schémy vyššie.` }
+          { role: "user", content: `Dátum: ${todayISO}. Vráť JSON podľa schémy V2.` }
         ],
         response_format: { type: "json_object" }
       });
@@ -63,16 +69,13 @@ async function tryRequestWithRetry() {
       const code = err?.code || err?.error?.code;
       const status = err?.status;
       console.warn(`Pokus ${i+1} z ${maxRetries} zlyhal – code=${code} status=${status}`);
-      // Pri 429/insufficient_quota backoff a skúsiť znova
       if (status === 429 || code === 'insufficient_quota') {
-        await new Promise(r => setTimeout(r, 2000 * (i + 1))); // 2s, 4s, 6s
+        await new Promise(r => setTimeout(r, 2000 * (i + 1)));
         continue;
       }
-      // Iné chyby – hneď padneme do fallbacku
       throw err;
     }
   }
-  // Po max retry vrátime null -> fallback
   return null;
 }
 
@@ -83,7 +86,21 @@ async function run() {
     try {
       const data = JSON.parse(json);
       data.date = todayISO;
-      await writeData(data);
+
+      // Bezpečnostná normalizácia
+      const norm = {
+        date: data.date,
+        ndegust: { menu: Array.isArray(data?.ndegust?.menu) ? data.ndegust.menu : [], priceBand: data?.ndegust?.priceBand || "UNDER_10" },
+        umedveda: { menu: Array.isArray(data?.umedveda?.menu) ? data.umedveda.menu : [], priceBand: data?.umedveda?.priceBand || "UNDER_15" },
+        tips: Array.isArray(data?.tips) ? data.tips.map(t => ({
+          name: t.name || "Tip",
+          dish: t.dish || "—",
+          priceBand: t.priceBand || "UNDER_10",
+          url: t.url || "https://www.google.com/maps"
+        })) : []
+      };
+
+      await writeData(norm);
       return;
     } catch (e) {
       console.error("Neplatný JSON z modelu, prechádzam na fallback.");
@@ -92,11 +109,14 @@ async function run() {
     console.warn("Model nedostupný/limit – prechádzam na fallback.");
   }
 
-  // Fallback: ak existuje včerajší/posledný data.json, skopíruj ho s dnešným dátumom
+  // Fallback na existujúci súbor
   if (existsSync('data.json')) {
     try {
       const prev = JSON.parse(await fs.readFile('data.json', 'utf8'));
       prev.date = todayISO;
+      if (!Array.isArray(prev.ndegust?.menu)) prev.ndegust = { menu: [], priceBand: prev.ndegust?.priceBand || "UNDER_10" };
+      if (!Array.isArray(prev.umedveda?.menu)) prev.umedveda = { menu: [], priceBand: prev.umedveda?.priceBand || "UNDER_15" };
+      prev.tips = Array.isArray(prev.tips) ? prev.tips.map(t => ({ ...t, url: t.url || "https://www.google.com/maps" })) : [];
       await writeData(prev);
       return;
     } catch (e) {
@@ -105,13 +125,10 @@ async function run() {
   }
 
   // Posledná možnosť: placeholder
-  const ph = placeholderData();
-  await writeData(ph);
+  await writeData(placeholderData());
 }
 
 run().catch(err => {
   console.error("Nezachytená chyba skriptu:", err);
-  // Aj pri chybe vytvoríme placeholder, aby job neskončil chybou a web fungoval
-  const ph = placeholderData();
-  writeData(ph).catch(() => process.exit(1));
+  writeData(placeholderData()).catch(() => process.exit(1));
 });
