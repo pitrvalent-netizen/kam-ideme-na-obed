@@ -1,74 +1,49 @@
-<!doctype html>
-<html lang="sk">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Kam ideme na obed?</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700&display=swap" rel="stylesheet">
-  <style>
-    :root { --bg:#0f1115; --card:#151821; --txt:#e8ebf1; --muted:#a7afc0; --accent:#f5c451; --ok:#86efac; }
-    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.6 Inter,system-ui,sans-serif}
-    .wrap{max-width:860px;margin:40px auto;padding:0 16px}
-    header{display:flex;align-items:center;gap:12px;margin-bottom:24px}
-    .dot{width:10px;height:10px;border-radius:50%;background:var(--ok)}
-    .card{background:var(--card);border-radius:16px;padding:18px 20px;margin-bottom:12px}
-    h1{font-size:24px;margin:0 0 4px} .date{color:var(--muted);font-size:14px}
-    h2{font-size:18px;margin:0 0 10px} .row{display:flex;flex-wrap:wrap;gap:10px}
-    .tag{font-size:12px;border-radius:999px;padding:6px 10px;background:#202538;color:var(--muted)}
-    .price{background:#1f2b1b;color:#b5f7c2}
-    .tips li{margin:6px 0}
-    footer{margin:24px 0;color:var(--muted);font-size:13px}
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <header>
-      <div class="dot"></div>
-      <div>
-        <h1>Kam ideme na obed?</h1>
-        <div class="date" id="date"></div>
-      </div>
-    </header>
+<script>
+  const PRICE_LABEL = { "UNDER_10":"do 10 €","UNDER_15":"do 15 €","OVER_20":"20+ €" };
 
-    <section class="card" id="ndegust"></section>
-    <section class="card" id="umedveda"></section>
-    <section class="card">
-      <h2>Tipy v okolí (do 15 km)</h2>
-      <ol class="tips" id="tips"></ol>
-    </section>
+  function render(data){
+    document.getElementById('date').textContent =
+      new Date(data.date).toLocaleDateString('sk-SK', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
 
-    <footer>Aktualizované denne o 10:30 • Čierna Voda (Chorvátsky Grob)</footer>
-  </div>
+    function blockList(el, title, section){
+      const items = section?.menu || [];
+      const list = items.length
+        ? `<ul style="margin:8px 0 0 18px;padding:0">${items.map(i => `<li>${i}</li>`).join('')}</ul>`
+        : `<div class="row"><span class="tag">—</span></div>`;
 
-  <script>
-    const PRICE_LABEL = { "UNDER_10":"do 10 €","UNDER_15":"do 15 €","OVER_20":"20+ €" };
-    fetch('data.json?cache=' + Date.now())
-      .then(r=>r.json())
-      .then(d=>{
-        document.getElementById('date').textContent =
-          new Date(d.date).toLocaleDateString('sk-SK', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+      el.innerHTML = `
+        <h2>${title}</h2>
+        <div class="row">
+          <span class="tag price">${PRICE_LABEL[section?.priceBand] || '—'}</span>
+        </div>
+        ${list}
+      `;
+    }
 
-        function block(el, title, item){
-          el.innerHTML = `
-            <h2>${title}</h2>
-            <div class="row">
-              <span class="tag">${item.soup || '—'}</span>
-              <span class="tag">${item.main || '—'}</span>
-              <span class="tag price">${PRICE_LABEL[item.priceBand] || '—'}</span>
-            </div>
-          `;
-        }
-        block(document.getElementById('ndegust'), 'Ndegust', d.ndegust);
-        block(document.getElementById('umedveda'), 'U Medveďa', d.umedveda);
+    blockList(document.getElementById('ndegust'), 'Ndegust', data.ndegust);
+    blockList(document.getElementById('umedveda'), 'U Medveďa', data.umedveda);
 
-        document.getElementById('tips').innerHTML = d.tips.map(t => `
-          <li>
-            <strong>${t.name}</strong> – ${t.dish || 'špecialita'}
-            <span class="tag price" style="margin-left:8px">${PRICE_LABEL[t.priceBand] || '—'}</span>
-          </li>
-        `).join('');
-      });
-  </script>
-</body>
-</html>
+    const tips = Array.isArray(data.tips) ? data.tips : [];
+    document.getElementById('tips').innerHTML = tips.map(t => {
+      const price = `<span class="tag price" style="margin-left:8px">${PRICE_LABEL[t.priceBand] || '—'}</span>`;
+      const link = t.url ? ` <a href="${t.url}" target="_blank" rel="noopener" style="margin-left:8px;color:#f5c451;text-decoration:none">zdroj ↗</a>` : '';
+      return `<li><strong>${t.name}</strong> – ${t.dish || 'špecialita'}${price}${link}</li>`;
+    }).join('');
+  }
+
+  fetch('./data.json?cache=' + Date.now())
+    .then(r => { if (!r.ok) throw new Error('Nepodarilo sa načítať data.json ('+r.status+')'); return r.json(); })
+    .then(d => render(d))
+    .catch(err => {
+      console.error(err);
+      const fallback = {
+        date: new Date().toISOString().slice(0,10),
+        ndegust: { menu: [], priceBand: "UNDER_10" },
+        umedveda: { menu: [], priceBand: "UNDER_15" },
+        tips: []
+      };
+      render(fallback);
+      const footer = document.querySelector('footer');
+      footer.innerHTML += ` • <span style="color:#f5c451">Pozn.: ${err.message}</span>`;
+    });
+</script>
