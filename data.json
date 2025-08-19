@@ -5,14 +5,16 @@
       "Polievka: Paradajková s bazalkou",
       "Kuracie prsia na grile, ryža"
     ],
-    "priceBand": "UNDER_10"
+    "priceBand": "UNDER_10",
+    "sourceUrl": "https://PRIDAT-URL-NDEGUST"
   },
   "umedveda": {
     "menu": [
       "Polievka: Cesnačka so syrom",
       "Bravčový perkelt s knedľou"
     ],
-    "priceBand": "UNDER_15"
+    "priceBand": "UNDER_15",
+    "sourceUrl": "https://PRIDAT-URL-U-MEDVEDA"
   },
   "tips": [
     {
