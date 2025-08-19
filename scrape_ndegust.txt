@@ -1,0 +1,1 @@
+SCRAPE ERROR https://www.ndegust.sk/denne-menu/: $root is not a function
