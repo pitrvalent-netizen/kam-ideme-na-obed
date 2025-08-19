@@ -1,6 +1,14 @@
 {
   "date": "2025-08-19",
-  "ndegust": { "soup": "", "main": "", "priceBand": "UNDER_10" },
-  "umedveda": { "soup": "", "main": "", "priceBand": "UNDER_10" },
+  "ndegust": {
+    "soup": "",
+    "main": "",
+    "priceBand": "UNDER_10"
+  },
+  "umedveda": {
+    "soup": "",
+    "main": "",
+    "priceBand": "UNDER_10"
+  },
   "tips": []
 }
