@@ -1,7 +1,6 @@
 import fs from 'fs/promises';
 import { existsSync } from 'fs';
-import cheerio from 'cheerio'; // HTML parser
-// Node 20 má fetch v jadre
+import { load } from 'cheerio'; // ESM named import
 
 const todayISO = new Date().toISOString().slice(0,10);
 
@@ -14,8 +13,8 @@ function sanitizeLines(lines) {
   return lines
     .map(t => t.replace(/\s+/g, ' ').trim())
     .filter(t => t && !/^(\*|·|-)$/.test(t))
-    .filter(t => !/^(pondelok|utorok|streda|štvrtok|piatok|sobota|nedeľa)\b/i.test(t)) // odfiltruje nadpisy dní
-    .slice(0, 24); // bezpečný limit
+    .filter(t => !/^(pondelok|utorok|streda|štvrtok|piatok|sobota|nedeľa)\b/i.test(t))
+    .slice(0, 24);
 }
 
 async function scrapeMenu(url, selector) {
@@ -24,7 +23,7 @@ async function scrapeMenu(url, selector) {
     const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const html = await res.text();
-    const $ = cheerio.load(html);
+    const $ = load(html);
     const sel = selector || 'li';
     const items = $(sel).map((_, el) => $(el).text()).get();
     return sanitizeLines(items);
@@ -44,9 +43,8 @@ function placeholderData() {
 }
 
 function normalizeToV2(data) {
-  // podpora starého formátu {soup, main} -> preklop na menu[]
   const toMenu = (obj) => {
-    if (!obj) return { menu: [], priceBand: "UNDER_10" };
+    if (!obj) return { menu: [], priceBand: "UNDER_10", sourceUrl: "" };
     if (Array.isArray(obj.menu)) return { menu: obj.menu, priceBand: obj.priceBand || "UNDER_10", sourceUrl: obj.sourceUrl || "" };
     const items = [];
     if (obj.soup) items.push(`Polievka: ${obj.soup}`);
@@ -70,21 +68,16 @@ function normalizeToV2(data) {
 }
 
 async function run() {
-  // načítaj zdroje (URL + selektory)
   const sources = await readJsonSafe('sources.json', { ndegust: {}, umedveda: {} });
-
-  // načítaj doterajší data.json (pre fallback/normalizáciu)
   const prev = normalizeToV2(await readJsonSafe('data.json', placeholderData()));
 
-  // SCRAPE
   const ndeMenu = await scrapeMenu(sources?.ndegust?.url, sources?.ndegust?.selector);
   const umMenu  = await scrapeMenu(sources?.umedveda?.url, sources?.umedveda?.selector);
 
-  // poskladaj výsledok
   const out = {
     date: todayISO,
     ndegust: {
-      menu: ndeMenu.length ? ndeMenu : prev.ndegust.menu, // ak scrape nič nenašiel, nechá predchádzajúce položky
+      menu: ndeMenu.length ? ndeMenu : prev.ndegust.menu,
       priceBand: sources?.ndegust?.priceBand || prev.ndegust.priceBand || "UNDER_10",
       sourceUrl: sources?.ndegust?.url || prev.ndegust.sourceUrl || ""
     },
@@ -93,7 +86,7 @@ async function run() {
       priceBand: sources?.umedveda?.priceBand || prev.umedveda.priceBand || "UNDER_15",
       sourceUrl: sources?.umedveda?.url || prev.umedveda.sourceUrl || ""
     },
-    tips: prev.tips // tipy nechávame, alebo si ich budeš udržiavať ručne/cez model
+    tips: prev.tips
   };
 
   await fs.writeFile('data.json', JSON.stringify(out, null, 2), 'utf8');
@@ -102,7 +95,6 @@ async function run() {
 
 run().catch(async (err) => {
   console.error('Chyba generovania:', err);
-  // posledná záchrana – nech data.json existuje
   const ph = placeholderData();
   await fs.writeFile('data.json', JSON.stringify(ph, null, 2), 'utf8');
   process.exit(0);
