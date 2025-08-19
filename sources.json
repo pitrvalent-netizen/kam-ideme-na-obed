@@ -3,14 +3,14 @@
     "url": "https://www.ndegust.sk/denne-menu/",
     "priceBand": "UNDER_10",
     "container": ".daily-menu, .denne-menu, .menu, main, body",
-    "selectors": [ "li", ".menu-item", ".daily-menu li", ".denne-menu li" ],
-    "blockSelectors": [ ".daily-menu", ".denne-menu", ".menu", "article", ".post", "main" ]
+    "selectors": [ "li", ".menu-item", ".daily-menu li", ".denne-menu li", "p" ],
+    "blockSelectors": [ ".daily-menu", ".denne-menu", ".menu", "article", ".post", "main", "body" ]
   },
   "umedveda": {
     "url": "https://www.facebook.com/umedveda2019/?locale=sk_SK",
     "priceBand": "UNDER_15",
     "container": ".daily-menu, .denne-menu, .menu, main, body",
-    "selectors": [ "li", ".menu-item", ".daily-menu li", ".denne-menu li" ],
-    "blockSelectors": [ ".daily-menu", ".denne-menu", ".menu", "article", ".post", "main" ]
+    "selectors": [ "li", ".menu-item", ".daily-menu li", ".denne-menu li", "p" ],
+    "blockSelectors": [ ".daily-menu", ".denne-menu", ".menu", "article", ".post", "main", "body" ]
   }
 }
