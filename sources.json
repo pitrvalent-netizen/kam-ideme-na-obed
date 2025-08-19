@@ -1,0 +1,12 @@
+{
+  "ndegust": {
+    "url": "https://PRIDAT-URL-NDEGUST",
+    "selector": "li",
+    "priceBand": "UNDER_10"
+  },
+  "umedveda": {
+    "url": "https://PRIDAT-URL-U-MEDVEDA",
+    "selector": "li",
+    "priceBand": "UNDER_15"
+  }
+}
