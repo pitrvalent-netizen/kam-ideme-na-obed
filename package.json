@@ -1,11 +1,12 @@
 {
   "name": "kam-ideme-na-obed",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "scripts": {
     "generate": "node scripts/generate-data.js"
   },
   "dependencies": {
-    "openai": "^4.56.0"
+    "openai": "^4.56.0",
+    "cheerio": "^1.0.0"
   }
 }
