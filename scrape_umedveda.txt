@@ -1,1 +1,1 @@
-SCRAPE ERROR https://www.facebook.com/umedveda2019/?locale=sk_SK: HTTP 400
+SCRAPE ERROR https://www.facebook.com/umedveda2019/?locale=sk_SK: $root is not a function
